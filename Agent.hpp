@@ -32,6 +32,7 @@ public:
 	virtual ~Sender() {}
 	// Called by the user and implemented by the policy
 	virtual void Send(Message m, Receiver<Message>& r) = 0;
+	virtual void Send(Message m) = 0;
 };
 
 //Simple Sending Policy, Fowards things directly
@@ -46,6 +47,11 @@ public:
 		{
 			r.Input(std::move(m));
 		}
+		virtual void Send(Message m) { Send(std::move(m), *m_receiver); }
+
+		void SetDefaultReceiver(Receiver<Message>* r) { m_receiver = r; }
+	private:
+		Receiver<Message>* m_receiver;
 	};
 };
 
@@ -63,6 +69,9 @@ public:
 			this->Receive(std::move(m));
 		}
 	};
+	// Allow other policies to start and stop threads
+	void Start() {}
+	void Finish() {}
 };
 
 // Implementation for Agents

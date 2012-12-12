@@ -5,6 +5,7 @@
 
 #include "Agent.hpp"
 #include "ThreadReceivePolicy.hpp"
+#include "System.hpp"
 
 // An empty struct to use as a message
 struct Message1 {};
@@ -38,8 +39,73 @@ public:
 	}
 };
 
+struct AddMessage
+{
+	int a,b;
+};
+
+struct ResultMessage
+{
+	int result;
+};
+
+// Adds two numbers
+// cheap and so can be done on the receiving thread
+class Adder : public AgentBase<
+	Messages<Receive<AddMessage>,
+		 Send<ResultMessage>>>
+{
+	void Receive(AddMessage m)
+	{
+		ResultMessage r;
+		r.result = m.a + m.b;
+		Send(r);
+	}
+};
+
+// Multiplies by a constant factor
+// Expensive so uses a separate thread
+template <int Factor>
+class ConstantMultiply : public AgentBase<
+	Messages<Receive<ResultMessage>,
+		 Send<ResultMessage>>,
+	ThreadReceivePolicy>
+{
+	void Receive(ResultMessage m)
+	{
+		m.result *= Factor;
+		Send(m);
+	}
+};
+
+// Define a System with an add and a multiply
+typedef System<Component<Adder>,
+	Component<ConstantMultiply<2>>,
+	Connection<Adder, ConstantMultiply<2>, ResultMessage>,
+	Input<Adder, AddMessage>,
+	Output<ConstantMultiply<2>, ResultMessage>> AddSystem;
+
 int main()
 {
+	// ======= System Example =========
+	// Instantiate the system
+	AddSystem s;
+
+	// Print the result of the computation
+	s.SetCallback([] (ResultMessage r) {std::cout << r.result << std::endl; });
+
+	// Start the worker threads
+	s.Start();
+
+	AddMessage m;
+	m.a = 2;
+	m.b = 3;
+
+	// Send the Message	
+	s.Input(m);
+
+	// ======== Manual Example ==========
+
 	// Instansiate the two agents
 	ReceivingAgent a1;
 	SendingAgent a2;
@@ -53,7 +119,8 @@ int main()
 	// Wait for the message to be received
 	sleep(1);
 
-	// Shutdown the thread belonging to a1
+	// Shutdown the thread belonging to a1 and the system
+	s.Finish();
 	a1.Finish();
 	return 0;
 }
