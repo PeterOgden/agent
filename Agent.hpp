@@ -116,6 +116,19 @@ public:
 			AgentImpl<Ts, ReceivePolicy, SendPolicy>(this, this)...
 		{
 		}
+		template <typename MessageType>
+		void Send(MessageType m)
+		{
+			static_cast<Sender<MessageType>*const>(this)->
+				Send(std::move(m));
+		}
+
+		template <typename MessageType>
+		void Send(MessageType m, Receiver<MessageType>& r)
+		{
+			static_cast<Sender<MessageType>*const>(this)->
+				Send(std::move(m), r);
+		}
 	};
 };
 
