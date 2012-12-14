@@ -1,6 +1,12 @@
+#ifndef SYSTEM_HPP
+#define SYSTEM_HPP
+
 // Implementation for a System of communicating agents
 // Constructs and wires up agents as specified in the template arguments
+#include <functional>
+#include <utility>
 
+#include "Agent.hpp"
 
 namespace Agent
 {
@@ -44,7 +50,7 @@ public:
 	SystemImpl() {
 		static_cast<SystemImpl<Component<FromAgent>, System>* const>(
 			static_cast<System* const>(this))->m_agent.
-			SetDefaultReceiver(
+			template SetDefaultReceiver<Message>(
 				&static_cast<SystemImpl<Component<ToAgent>, System>* const>(static_cast<System* const>(this))->m_agent);
 	};
 	void Start() {}
@@ -73,7 +79,7 @@ public:
 	SystemImpl() {
 		static_cast<SystemImpl<Component<Agent>,System>* const>(
 			static_cast<System* const>(this))->m_agent.
-			SetDefaultReceiver(&m_component);
+			template SetDefaultReceiver<Message>(&m_component);
 	}
 	void SetCallback(const std::function<void(Message)>& callback)
 	{ m_component.SetCallback(callback); }
@@ -127,4 +133,4 @@ public:
 
 
 }
-
+#endif

@@ -129,6 +129,18 @@ public:
 			static_cast<Sender<MessageType>*const>(this)->
 				Send(std::move(m), r);
 		}
+		template <typename MessageType>
+		void SetDefaultReceiver(Receiver<MessageType>* r)
+		{
+			static_cast<SimpleSendPolicy::template SendImpl<MessageType>*const>(this)->
+				SetDefaultReceiver(r);
+		}
+		template <typename MessageType>
+		void Input(MessageType m)
+		{
+			static_cast<Receiver<MessageType>*const>(this)->
+				Input(std::move(m));
+		}
 	};
 };
 
