@@ -55,9 +55,13 @@ public:
 		// lock otherwise cycles may cause deadlocks.
 		virtual bool ExecuteSaved()
 		{
+			std::unique_lock<std::mutex> l(m_policy->m_mutex);
 			if (!m_queue.empty())
 			{
-				this->Receive(m_queue.front());
+				Message m = std::move(m_queue.front());
+				l.unlock();
+				this->Receive(std::move(m));
+				l.lock();
 				m_queue.pop();
 			}
 			return !m_queue.empty();
@@ -76,9 +80,11 @@ public:
 	// Stops the processing thread
 	void Finish()
 	{
-		//std::unique_lock<std::mutex> l(m_mutex);
-		m_exit = true;
-		m_cv.notify_all();
+		{
+			std::unique_lock<std::mutex> l(m_mutex);
+			m_exit = true;
+			m_cv.notify_all();
+		}
 		m_thread.join();
 	}
 
@@ -97,9 +103,12 @@ protected:
 	// Returns false when the thread has been signalled to exit;
 	bool WaitForEvent()
 	{
-		std::unique_lock<std::mutex> l(m_mutex);
 		while (ExecuteSaved());
-		m_cv.wait(l);
+		{
+			std::unique_lock<std::mutex> l(m_mutex);
+			if (m_exit) return false;
+			m_cv.wait(l);
+		}
 		while (ExecuteSaved());
 		return !m_exit;
 	}
@@ -107,7 +116,7 @@ private:
 	std::thread m_thread;
 	std::condition_variable m_cv;
 	std::mutex m_mutex;
-	bool m_exit;
+	volatile bool m_exit;
 	std::vector<QueuePoll*> m_queues;
 
 	// Default implementation of the entry function can be overridden
